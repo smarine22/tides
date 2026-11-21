@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B3954">
+<meta name="description" content="7-day tide predictions for the Thames Estuary, calculated on your phone - works offline.">
+<title>Tides</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --hdr: #0B3954; --hdr2: #1E5A80; --blue: #0B78B4; --blue-d: #075A88; --fill: #E3F0F8; --text: #1A1A1A;
+    --sub: #5F6B73; --line: #D9DEE2; --grid: #E6EAED; --bg: #FFFFFF; --soft: #F4F6F7; --red: #C62828; --amber: #F4C430;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+               font: 16px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; max-width: 720px; margin: 0 auto; overscroll-behavior-y: contain; }
+  button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+
+  header { background: var(--hdr); color: #fff; padding: calc(env(safe-area-inset-top) + 8px) 10px 8px;
+           display: flex; align-items: center; gap: 8px; }
+  #placeBtn { background: var(--hdr2); border-radius: 8px; padding: 8px 10px; font-size: 18px; font-weight: 600;
+              flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  #placeName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #clockBtn { display: flex; align-items: center; gap: 6px; padding: 4px 2px 4px 6px; }
+  #clock { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  #zone { background: var(--amber); color: #222; font-size: 12px; font-weight: 700; border-radius: 4px; padding: 2px 5px; }
+  #infoBtn { width: 38px; height: 38px; border-radius: 8px; background: var(--hdr2); font-size: 20px; font-weight: 700; }
+
+  #weekbar { display: flex; align-items: center; gap: 6px; padding: 8px 10px 4px; }
+  .arrow { width: 44px; height: 40px; border-radius: 8px; background: #E9EDF0; font-size: 22px; flex: none; }
+  #weekBtn { flex: 1; height: 40px; border-radius: 8px; background: var(--hdr2); color: #fff; font-weight: 600; position: relative; }
+  #dateInput { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; border: 0; }
+
+  #tabs { display: grid; grid-template-columns: repeat(7, 1fr); padding: 2px 6px 0; border-bottom: 1px solid var(--line); }
+  .tab { padding: 6px 0 7px; text-align: center; border-bottom: 3px solid transparent; color: var(--sub); line-height: 1.15; }
+  .tab b { display: block; font-size: 15px; color: var(--text); font-weight: 500; }
+  .tab span { font-size: 13px; }
+  .tab.sel { border-bottom-color: var(--blue); }
+  .tab.sel b { font-weight: 700; }
+  .tab.today b { color: var(--blue-d); }
+
+  #graphWrap { position: relative; padding: 4px 4px 0; touch-action: pan-y; }
+  #graph { width: 100%; height: 230px; display: block; }
+  #sliderRow { display: flex; align-items: center; gap: 8px; padding: 2px 12px 6px; background: var(--soft);
+               border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  #sliderRow span { font-size: 13px; color: var(--sub); white-space: nowrap; width: 46px; }
+  #sliderRow span:last-child { text-align: right; }
+  #slider { flex: 1; accent-color: var(--blue); height: 32px; }
+
+  main { flex: 1; overflow-y: auto; padding: 4px 12px calc(env(safe-area-inset-bottom) + 12px); }
+  #dayTitle { font-weight: 700; margin: 8px 0 2px; font-size: 17px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 500; color: var(--sub); font-size: 14px; padding: 6px 4px 4px; }
+  td { padding: 8px 4px; font-size: 21px; font-variant-numeric: tabular-nums; vertical-align: baseline; }
+  td.kind { width: 22%; }
+  td.kind.high { color: var(--blue-d); }
+  td small { font-size: 13px; color: var(--sub); margin-left: 4px; white-space: nowrap; }
+  tr.now td { background: #F1F4F6; }
+  tr.now td:first-child { border-radius: 8px 0 0 8px; } tr.now td:last-child { border-radius: 0 8px 8px 0; }
+  .note { font-size: 13px; color: var(--sub); margin: 10px 2px 4px; }
+  .note.warn { color: var(--red); }
+
+  .sheet { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 10; }
+  .sheet.open { display: flex; align-items: flex-end; justify-content: center; }
+  .panel { background: #fff; width: 100%; max-width: 720px; max-height: 88%; border-radius: 16px 16px 0 0;
+           display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom); }
+  .panel h2 { margin: 0; font-size: 19px; padding: 14px 16px 4px; }
+  .panel .hint { font-size: 13px; color: var(--sub); padding: 0 16px 8px; }
+  #placeList { overflow-y: auto; padding: 4px 10px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .place { background: #F1F4F6; border-radius: 8px; padding: 10px 6px; text-align: center; min-height: 52px; }
+  .place.full { background: var(--fill); border: 2px solid var(--blue); color: var(--blue-d); font-weight: 600; }
+  .place.full small { display: block; font-size: 11px; font-weight: 400; color: var(--blue); }
+  .place.sel { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .place.sel small { color: #fff; }
+  .closeBtn { flex: none; margin: 6px 16px 12px; height: 46px; border-radius: 8px; background: #E0E4E7; font-weight: 600; }
+  #infoText { overflow-y: auto; padding: 0 16px 6px; font-size: 14px; color: #333; }
+  #infoText table td { font-size: 13px; padding: 3px 4px; } #infoText table th { font-size: 12px; padding: 3px 4px; }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #263238; color: #fff;
+           padding: 10px 16px; border-radius: 8px; font-size: 14px; display: none; z-index: 20; }
+  #lock { position: fixed; inset: 0; z-index: 50; background: var(--hdr); color: #fff; display: none;
+          flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; }
+  #lock.show { display: flex; }
+  #lock h1 { margin: 0; font-size: 26px; }
+  #lock p { margin: 0; color: #CFE0EA; max-width: 300px; }
+  #lockPw { width: 100%; max-width: 300px; font: inherit; font-size: 20px; padding: 12px; border-radius: 10px; border: 0; color: #111; }
+  #lockGo { width: 100%; max-width: 300px; padding: 12px; border-radius: 10px; background: var(--amber); color: #222; font-weight: 700; font-size: 18px; }
+  #lockMsg { min-height: 1.3em; color: #FFB4A9; font-weight: 600; }
+  /* Landscape (phone turned sideways, tablets, PCs): like the 5" display - tide table on the left, graph on the right */
+  @media (orientation: landscape) and (min-width: 600px) {
+    html, body { height: 100%; overflow: hidden; }
+    body { max-width: none; display: grid; height: 100dvh;
+           grid-template-columns: minmax(300px, 1fr) minmax(0, 1.55fr);
+           grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+           grid-template-areas: "hdr hdr" "main week" "main tabs" "main graph" "main slider";
+           padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+    header { grid-area: hdr; padding: calc(env(safe-area-inset-top) + 4px) 10px 4px; }
+    #placeBtn { flex: 0 1 320px; font-size: 17px; padding: 5px 10px; margin-right: auto; }
+    #clock { font-size: 24px; }
+    #infoBtn { width: 34px; height: 34px; }
+    #weekbar { grid-area: week; padding: 6px 10px 2px; }
+    .arrow, #weekBtn { height: 34px; }
+    #tabs { grid-area: tabs; }
+    .tab { padding: 3px 0 4px; }
+    .tab b { font-size: 14px; } .tab span { font-size: 12px; }
+    #graphWrap { grid-area: graph; min-height: 0; }
+    #graph { position: absolute; left: 4px; top: 4px; width: calc(100% - 8px); height: calc(100% - 4px); }
+    #sliderRow { grid-area: slider; padding-bottom: calc(env(safe-area-inset-bottom) + 2px); border-bottom: 0; }
+    #slider { height: 28px; }
+    main { grid-area: main; border-right: 1px solid var(--line); padding: 2px 12px calc(env(safe-area-inset-bottom) + 8px); }
+    #dayTitle { margin-top: 6px; font-size: 16px; }
+    td { padding: 5px 4px; font-size: 19px; }
+    .note { margin-top: 6px; }
+    .panel { max-height: 94%; }
+    #placeList { grid-template-columns: repeat(4, 1fr); }
+    .place { padding: 6px 4px; min-height: 44px; }
+    .panel h2 { padding-top: 10px; }
+    .closeBtn { height: 40px; margin: 4px 16px 8px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <button id="placeBtn" aria-label="Choose a place"><span id="placeName">Sheerness</span><span aria-hidden="true">▾</span></button>
+  <button id="clockBtn" aria-label="Back to now"><span id="clock">--:--</span><span id="zone">GMT</span></button>
+  <button id="infoBtn" aria-label="About">i</button>
+</header>
+<div id="weekbar">
+  <button class="arrow" id="prevWeek" aria-label="Previous week">‹</button>
+  <button id="weekBtn"><span id="weekLabel"></span> ▾<input type="date" id="dateInput" aria-label="Pick a date"></button>
+  <button class="arrow" id="nextWeek" aria-label="Next week">›</button>
+</div>
+<div id="tabs"></div>
+<div id="graphWrap"><canvas id="graph"></canvas></div>
+<div id="sliderRow"><span id="sldL"></span><input type="range" id="slider" min="0" max="1000" value="0" aria-label="Scroll through the week"><span id="sldR"></span></div>
+<main>
+  <div id="dayTitle"></div>
+  <table><thead><tr><th>Tide</th><th id="timeHdr">Time (GMT)</th><th id="htHdr">Height (m)</th></tr></thead><tbody id="rows"></tbody></table>
+  <p class="note" id="note"></p>
+</main>
+
+<div class="sheet" id="placeSheet"><div class="panel">
+  <h2>Choose a place</h2>
+  <div class="hint">Outlined places: full predictions (times and heights). Others: approximate times from high-water differences, no heights.</div>
+  <div id="placeList"></div>
+  <button class="closeBtn" data-close>Close</button>
+</div></div>
+
+<div class="sheet" id="infoSheet"><div class="panel">
+  <h2>About these tides</h2>
+  <div id="infoText"></div>
+  <button class="closeBtn" data-close>Close</button>
+</div></div>
+<div id="toast"></div>
+
+<div id="lock" role="dialog" aria-label="Enter password">
+  <h1>Tides</h1>
+  <p>Enter the password. This phone will remember it.</p>
+  <form id="lockForm" style="display:contents">
+    <input id="lockPw" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password">
+    <button id="lockGo" type="submit">Unlock</button>
+  </form>
+  <div id="lockMsg"></div>
+</div>
+<script src="tides-data.js"></script>
+<script src="tide.js"></script>
+<script src="app.js"></script>
+<script src="unlock.js"></script>
+</body>
+</html>
