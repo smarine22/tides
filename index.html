@@ -79,7 +79,9 @@
   .place.sel small { color: #fff; }
   .cal { max-width: 460px; }
   .calHead { display: flex; align-items: center; gap: 8px; padding: 14px 14px 6px; }
-  .calTitle { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 19px; font-weight: 700; }
+  #calMonth { flex: none; width: 7.2em; text-align: center; font-size: 19px; font-weight: 700; }   /* fixed width: arrows never move */
+  #calYear { margin-left: auto; }
+  @media (max-width: 350px) { #calMonth { font-size: 17px; width: 6.4em; } .calHead { gap: 6px; } }
   #calYear { font: inherit; font-size: 18px; font-weight: 600; color: var(--blue-d); background: var(--fill);
              border: 1px solid #B9D6E8; border-radius: 8px; padding: 5px 6px; }
   .calGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 4px 12px 6px; }
@@ -87,6 +89,7 @@
   .calGrid .dow.we { color: var(--blue-d); }
   .cd { height: 44px; display: flex; align-items: center; justify-content: center; font-size: 18px;
         font-variant-numeric: tabular-nums; border-radius: 8px; }
+  .cd.blank { pointer-events: none; }
   .cd span { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
   .cd.wk { background: var(--fill); }
   .cd.wk0 span { background: var(--blue); color: #fff; font-weight: 700; }
@@ -180,8 +183,9 @@
 <div class="sheet" id="calSheet"><div class="panel cal">
   <div class="calHead">
     <button class="arrow" id="calPrev" aria-label="Previous month">‹</button>
-    <div class="calTitle"><span id="calMonth"></span><select id="calYear" aria-label="Year"></select></div>
+    <span id="calMonth"></span>
     <button class="arrow" id="calNext" aria-label="Next month">›</button>
+    <select id="calYear" aria-label="Year"></select>
   </div>
   <div class="calGrid" id="calDays"></div>
   <button class="closeBtn" data-close>Close</button>

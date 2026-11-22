@@ -10,7 +10,7 @@ window.startTideApp = function () {
   const pad2 = (n) => String(n).padStart(2, "0");
   const nowUtc = () => Math.floor(Date.now() / 1000);
   // Filled in by tools/build.py; "dev" when the app/ folder is served directly.
-  const APP_VERSION = "1.01", APP_BUILT = "2026-11-22";
+  const APP_VERSION = "1.02", APP_BUILT = "2026-11-22";
   const ukDate = (iso) => String(iso).split("-").reverse().join("-");   // 2026-11-21 -> 21-11-2026
 
   // ---------------------------------------------------------------- place
@@ -340,7 +340,8 @@ window.startTideApp = function () {
     });
     const first = UK.daysFromCivil(calY, calM, 1), wk0 = UK.daysFromCivil(...wk);
     const lead = (UK.weekday(calY, calM, 1) + 6) % 7;      // weeks start on Monday
-    for (let i = 0; i < lead; ++i) g.appendChild(document.createElement("div"));
+    const blank = () => { const e = document.createElement("div"); e.className = "cd blank"; g.appendChild(e); };
+    for (let i = 0; i < lead; ++i) blank();
     for (let d = 1, n = UK.daysInMonth(calY, calM); d <= n; ++d) {
       const b = document.createElement("button"), k = first + d - 1 - wk0;
       b.className = "cd" + (k >= 0 && k < 7 ? " wk" : "") + (k === 0 ? " wk0" : "") +
@@ -350,6 +351,7 @@ window.startTideApp = function () {
       b.onclick = () => { touched(); closeSheets(); goTo(calY, calM, d); };
       g.appendChild(b);
     }
+    for (let i = lead + UK.daysInMonth(calY, calM); i < 42; ++i) blank();   // always 6 rows, so nothing moves month to month
   }
   $("calPrev").onclick = () => { touched(); calMove(-1); };
   $("calNext").onclick = () => { touched(); calMove(1); };
