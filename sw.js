@@ -1,6 +1,6 @@
 // Offline support: keep the app's files on the phone. Bump VERSION whenever any file changes
 // (tools/build.py does this automatically), so phones pick up the new tide data.
-const VERSION = "tides-20261122-080200";
+const VERSION = "tides-20261122-102133";
 const FILES = ["./", "index.html", "tides-data.js", "tide.js", "app.js", "unlock.js", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener("activate", (e) => {
