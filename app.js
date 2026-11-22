@@ -9,6 +9,7 @@ window.startTideApp = function () {
   const HEIGHT_ERR_SHOW_M = 0.0995;           // the +- next to a height is shown only from 0.1 m
   const pad2 = (n) => String(n).padStart(2, "0");
   const nowUtc = () => Math.floor(Date.now() / 1000);
+  const ukDate = (iso) => String(iso).split("-").reverse().join("-");   // 2026-11-21 -> 21-11-2026
 
   // ---------------------------------------------------------------- place
   const SHEERNESS = Math.max(0, D.places.findIndex((p) => p.name === "Sheerness"));
@@ -150,7 +151,7 @@ window.startTideApp = function () {
     }
     const note = $("note");
     note.className = "note";
-    if (model) note.textContent = "Heights in metres above Chart Datum. ± = 95% range of the prediction error. Not for navigation.";
+    if (model) note.textContent = "Heights in metres above Chart Datum. 95% of predictions are within ± of the official tide tables. Not for navigation.";
     else {
       const off = offsetMin(placeIdx);
       note.textContent = `Sheerness ${off < 0 ? "−" : "+"}${Math.floor(Math.abs(off) / 60)}:${pad2(Math.abs(off) % 60)} ` +
@@ -285,12 +286,12 @@ window.startTideApp = function () {
       "<p>Tides are calculated on this phone from harmonic tide models fitted to the official published tables " +
       "(Peel Ports, Port of London Authority, UK Hydrographic Office, Harwich Haven Authority, Port of Dover and others). " +
       "No internet is needed once the app is installed.</p>" +
-      "<p><b>Accuracy</b> – 95% of tides within (tested on years each model had not seen):</p>" +
+      "<p><b>Accuracy</b> – 95% of tide predictions fall within the range shown below of the official tide tables (tested on years each model had not seen):</p>" +
       `<table><tr><th>Port</th><th>Times</th><th>Heights</th></tr>${rows}</table>` +
       "<p>Other places use Sheerness times moved by their high-water difference on Chatham (approximate, no heights).</p>" +
       "<p>These are astronomical predictions: wind and air pressure can change the real water level by much more than the ± values. " +
       "<b>Not for navigation.</b></p>" +
-      `<p style="color:#5F6B73">Tide models generated ${D.generated}. Times in UK time (GMT/BST automatically).</p>`;
+      `<p style="color:#5F6B73">Tide models generated ${ukDate(D.generated)}. Times in UK time (GMT/BST automatically).</p>`;
   }
   function openSheet(id) { $(id).classList.add("open"); }
   function closeSheets() { document.querySelectorAll(".sheet").forEach((s) => s.classList.remove("open")); }
