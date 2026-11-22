@@ -9,6 +9,8 @@ window.startTideApp = function () {
   const HEIGHT_ERR_SHOW_M = 0.0995;           // the +- next to a height is shown only from 0.1 m
   const pad2 = (n) => String(n).padStart(2, "0");
   const nowUtc = () => Math.floor(Date.now() / 1000);
+  // Filled in by tools/build.py; "dev" when the app/ folder is served directly.
+  const APP_VERSION = "1.01", APP_BUILT = "2026-11-22";
   const ukDate = (iso) => String(iso).split("-").reverse().join("-");   // 2026-11-21 -> 21-11-2026
 
   // ---------------------------------------------------------------- place
@@ -95,7 +97,6 @@ window.startTideApp = function () {
     const a = UK.toLocal(dayStart[0] + 43200), b = UK.toLocal(dayStart[6] + 43200);
     $("weekLabel").textContent = `${UK.DAY_SHORT[a.wday]} ${a.day}${a.month !== b.month ? " " + UK.MONTH_SHORT[a.month - 1] : ""}` +
       ` – ${UK.DAY_SHORT[b.wday]} ${b.day} ${UK.MONTH_SHORT[b.month - 1]} ${b.year}`;
-    $("dateInput").value = `${wk[0]}-${pad2(wk[1])}-${pad2(wk[2])}`;
     $("sldL").textContent = `${UK.DAY_SHORT[a.wday]} ${a.day}`;
     $("sldR").textContent = `${UK.DAY_SHORT[b.wday]} ${b.day}`;
     const tabs = $("tabs");
@@ -174,9 +175,10 @@ window.startTideApp = function () {
     ctx.font = "12px system-ui, sans-serif";
     // metre grid
     ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1; ctx.fillStyle = css("--sub"); ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    const labelEvery = (P.b - P.t) / (Y_MAX - Y_MIN) < 15 ? 2 : 1;   // short graph: label every 2 m so labels don't touch
     for (let m = Math.ceil(Y_MIN); m <= Y_MAX; ++m) {
       ctx.beginPath(); ctx.moveTo(P.l, Math.round(y(m)) + 0.5); ctx.lineTo(P.r, Math.round(y(m)) + 0.5); ctx.stroke();
-      if (model) ctx.fillText(m + " m", P.l - 5, y(m));
+      if (model && (labelEvery === 1 || m % 2 === 0)) ctx.fillText(m + " m", P.l - 5, y(m));
     }
     // hours: grid every 2 h, labels every 4 h, midnight line + day name
     const t0 = winStart + viewMin * 60 - 3600, t1 = t0 + (VIEW_MIN + 120) * 60;
@@ -291,7 +293,8 @@ window.startTideApp = function () {
       "<p>Other places use Sheerness times moved by their high-water difference on Chatham (approximate, no heights).</p>" +
       "<p>These are astronomical predictions: wind and air pressure can change the real water level by much more than the ± values. " +
       "<b>Not for navigation.</b></p>" +
-      `<p style="color:#5F6B73">Tide models generated ${ukDate(D.generated)}. Times in UK time (GMT/BST automatically).</p>`;
+      `<p style="color:#5F6B73">Tide models generated ${ukDate(D.generated)}. Times in UK time (GMT/BST automatically).</p>` +
+      `<p style="color:#5F6B73"><b>Version ${APP_VERSION}</b>${APP_BUILT ? ", built " + ukDate(APP_BUILT) : ""}</p>`;
   }
   function openSheet(id) { $(id).classList.add("open"); }
   function closeSheets() { document.querySelectorAll(".sheet").forEach((s) => s.classList.remove("open")); }
@@ -305,14 +308,56 @@ window.startTideApp = function () {
   $("prevWeek").onclick = () => { touched(); goTo(...UK.addDays(...wk, -7), true); };
   $("nextWeek").onclick = () => { touched(); goTo(...UK.addDays(...wk, 7)); };
   $("clockBtn").onclick = () => { touched(); goNow(); };
-  $("weekBtn").onclick = () => { touched(); const i = $("dateInput"); if (i.showPicker) { try { i.showPicker(); } catch (e) { /* not allowed here */ } } };
-  $("dateInput").onchange = (e) => {
-    touched();
-    const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(e.target.value);
-    if (m) goTo(+m[1], +m[2], +m[3]);
-  };
+  $("weekBtn").onclick = () => { touched(); openCalendar(); };
+
+  // ---------------------------------------------------------------- calendar (drawn by the app, the same on every phone)
+  const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const CAL_FIRST = UK.toLocal(nowUtc()).year - 5, CAL_LAST = CAL_FIRST + 15;
+  let calY = 0, calM = 0;
+  (function fillYears() {
+    const sel = $("calYear");
+    for (let y = CAL_FIRST; y <= CAL_LAST; ++y) { const o = document.createElement("option"); o.value = y; o.textContent = y; sel.appendChild(o); }
+  })();
+  function openCalendar() { calY = wk[0]; calM = wk[1]; drawCalendar(); openSheet("calSheet"); }
+  function calMove(n) {
+    let y = calY, m = calM + n;
+    if (m < 1) { m = 12; --y; } else if (m > 12) { m = 1; ++y; }
+    if (y < CAL_FIRST || y > CAL_LAST) return;
+    calY = y; calM = m; drawCalendar();
+  }
+  function drawCalendar() {
+    calY = Math.min(CAL_LAST, Math.max(CAL_FIRST, calY));
+    $("calMonth").textContent = MONTH_LONG[calM - 1];
+    $("calYear").value = calY;
+    $("calPrev").disabled = calY === CAL_FIRST && calM === 1;
+    $("calNext").disabled = calY === CAL_LAST && calM === 12;
+    $("calPrev").style.opacity = $("calPrev").disabled ? 0.35 : 1;
+    $("calNext").style.opacity = $("calNext").disabled ? 0.35 : 1;
+    const g = $("calDays"), today = UK.toLocal(nowUtc());
+    g.innerHTML = "";
+    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach((d, i) => {
+      const e = document.createElement("div"); e.className = "dow" + (i >= 5 ? " we" : ""); e.textContent = d; g.appendChild(e);
+    });
+    const first = UK.daysFromCivil(calY, calM, 1), wk0 = UK.daysFromCivil(...wk);
+    const lead = (UK.weekday(calY, calM, 1) + 6) % 7;      // weeks start on Monday
+    for (let i = 0; i < lead; ++i) g.appendChild(document.createElement("div"));
+    for (let d = 1, n = UK.daysInMonth(calY, calM); d <= n; ++d) {
+      const b = document.createElement("button"), k = first + d - 1 - wk0;
+      b.className = "cd" + (k >= 0 && k < 7 ? " wk" : "") + (k === 0 ? " wk0" : "") +
+        (today.year === calY && today.month === calM && today.day === d ? " today" : "");
+      b.innerHTML = `<span>${d}</span>`;
+      b.setAttribute("aria-label", `${d} ${MONTH_LONG[calM - 1]} ${calY}`);
+      b.onclick = () => { touched(); closeSheets(); goTo(calY, calM, d); };
+      g.appendChild(b);
+    }
+  }
+  $("calPrev").onclick = () => { touched(); calMove(-1); };
+  $("calNext").onclick = () => { touched(); calMove(1); };
+  $("calYear").onchange = (e) => { touched(); calY = +e.target.value; drawCalendar(); };
   $("slider").oninput = (e) => { touched(); setView(e.target.value / 1000 * maxViewMin(), true); };
   window.addEventListener("resize", drawGraph);
+  // the graph's height can change without the window changing (e.g. a day with more tides): redraw then too
+  if (window.ResizeObserver) { let lastH = 0; new ResizeObserver(() => { const h = $("graph").clientHeight; if (h !== lastH) { lastH = h; drawGraph(); } }).observe($("graph")); }
 
   // every 15 s: clock; each minute: table and graph; left alone 5 min (or day changed): back to now
   let lastMinute = -1, lastDay = null;

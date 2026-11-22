@@ -33,7 +33,6 @@
   #weekbar { display: flex; align-items: center; gap: 6px; padding: 8px 10px 4px; }
   .arrow { width: 44px; height: 40px; border-radius: 8px; background: #E9EDF0; font-size: 22px; flex: none; }
   #weekBtn { flex: 1; height: 40px; border-radius: 8px; background: var(--hdr2); color: #fff; font-weight: 600; position: relative; }
-  #dateInput { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; border: 0; }
 
   #tabs { display: grid; grid-template-columns: repeat(7, 1fr); padding: 2px 6px 0; border-bottom: 1px solid var(--line); }
   .tab { padding: 6px 0 7px; text-align: center; border-bottom: 3px solid transparent; color: var(--sub); line-height: 1.15; }
@@ -43,15 +42,17 @@
   .tab.sel b { font-weight: 700; }
   .tab.today b { color: var(--blue-d); }
 
-  #graphWrap { position: relative; padding: 4px 4px 0; touch-action: pan-y; }
-  #graph { width: 100%; height: 230px; display: block; }
+  /* The graph is 230 px tall when there is room; on shorter screens (e.g. Galaxy S22) it gives up height,
+     down to 120 px, so the tide table below fits without scrolling. */
+  #graphWrap { position: relative; touch-action: pan-y; flex: 1 1 234px; min-height: 124px; max-height: 234px; }
+  #graph { position: absolute; left: 4px; top: 4px; width: calc(100% - 8px); height: calc(100% - 4px); display: block; }
   #sliderRow { display: flex; align-items: center; gap: 8px; padding: 2px 12px 6px; background: var(--soft);
                border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   #sliderRow span { font-size: 13px; color: var(--sub); white-space: nowrap; width: 46px; }
   #sliderRow span:last-child { text-align: right; }
   #slider { flex: 1; accent-color: var(--blue); height: 32px; }
 
-  main { flex: 1; overflow-y: auto; padding: 4px 12px calc(env(safe-area-inset-bottom) + 12px); }
+  main { flex: 0 0.001 auto; min-height: 0; overflow-y: auto; padding: 4px 12px calc(env(safe-area-inset-bottom) + 12px); }
   #dayTitle { font-weight: 700; margin: 8px 0 2px; font-size: 17px; }
   table { width: 100%; border-collapse: collapse; }
   th { text-align: left; font-weight: 500; color: var(--sub); font-size: 14px; padding: 6px 4px 4px; }
@@ -76,6 +77,21 @@
   .place.full small { display: block; font-size: 11px; font-weight: 400; color: var(--blue); }
   .place.sel { background: var(--blue); border-color: var(--blue); color: #fff; }
   .place.sel small { color: #fff; }
+  .cal { max-width: 460px; }
+  .calHead { display: flex; align-items: center; gap: 8px; padding: 14px 14px 6px; }
+  .calTitle { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 19px; font-weight: 700; }
+  #calYear { font: inherit; font-size: 18px; font-weight: 600; color: var(--blue-d); background: var(--fill);
+             border: 1px solid #B9D6E8; border-radius: 8px; padding: 5px 6px; }
+  .calGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 4px 12px 6px; }
+  .calGrid .dow { text-align: center; font-size: 13px; color: var(--sub); padding: 4px 0; }
+  .calGrid .dow.we { color: var(--blue-d); }
+  .cd { height: 44px; display: flex; align-items: center; justify-content: center; font-size: 18px;
+        font-variant-numeric: tabular-nums; border-radius: 8px; }
+  .cd span { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+  .cd.wk { background: var(--fill); }
+  .cd.wk0 span { background: var(--blue); color: #fff; font-weight: 700; }
+  .cd.today span { box-shadow: inset 0 0 0 2.5px var(--red); font-weight: 700; }
+  .cd:active { background: #D5E6F1; }
   .closeBtn { flex: none; margin: 6px 16px 12px; height: 46px; border-radius: 8px; background: #E0E4E7; font-weight: 600; }
   #infoText { overflow-y: auto; padding: 0 16px 6px; font-size: 14px; color: #333; }
   #infoText table td { font-size: 13px; padding: 3px 4px; } #infoText table th { font-size: 12px; padding: 3px 4px; }
@@ -89,6 +105,15 @@
   #lockPw { width: 100%; max-width: 300px; font: inherit; font-size: 20px; padding: 12px; border-radius: 10px; border: 0; color: #111; }
   #lockGo { width: 100%; max-width: 300px; padding: 12px; border-radius: 10px; background: var(--amber); color: #222; font-weight: 700; font-size: 18px; }
   #lockMsg { min-height: 1.3em; color: #FFB4A9; font-weight: 600; }
+  /* Shorter portrait screens (e.g. Galaxy S22): tighter table rows, so the graph keeps more height */
+  @media (orientation: portrait) and (max-height: 760px) {
+    #weekbar { padding-top: 6px; }
+    .tab { padding: 4px 0 5px; }
+    #dayTitle { margin-top: 5px; }
+    td { padding: 5px 4px; }
+    .note { margin-top: 6px; }
+    main { padding-bottom: calc(env(safe-area-inset-bottom) + 6px); }
+  }
   /* Landscape (phone turned sideways, tablets, PCs): like the 5" display - tide table on the left, graph on the right */
   @media (orientation: landscape) and (min-width: 600px) {
     html, body { height: 100%; overflow: hidden; }
@@ -119,6 +144,9 @@
     .place { padding: 6px 4px; min-height: 44px; }
     .panel h2 { padding-top: 10px; }
     .closeBtn { height: 40px; margin: 4px 16px 8px; }
+    .calHead { padding: 6px 14px 2px; }
+    .cd { height: 32px; } .cd span { width: 30px; height: 30px; }
+    .calGrid .dow { padding: 1px 0; }
   }
 </style>
 </head>
@@ -130,7 +158,7 @@
 </header>
 <div id="weekbar">
   <button class="arrow" id="prevWeek" aria-label="Previous week">‹</button>
-  <button id="weekBtn"><span id="weekLabel"></span> ▾<input type="date" id="dateInput" aria-label="Pick a date"></button>
+  <button id="weekBtn" aria-label="Pick a date"><span id="weekLabel"></span> ▾</button>
   <button class="arrow" id="nextWeek" aria-label="Next week">›</button>
 </div>
 <div id="tabs"></div>
@@ -146,6 +174,16 @@
   <h2>Choose a place</h2>
   <div class="hint">Outlined places: full predictions (times and heights). Others: approximate times from high-water differences, no heights.</div>
   <div id="placeList"></div>
+  <button class="closeBtn" data-close>Close</button>
+</div></div>
+
+<div class="sheet" id="calSheet"><div class="panel cal">
+  <div class="calHead">
+    <button class="arrow" id="calPrev" aria-label="Previous month">‹</button>
+    <div class="calTitle"><span id="calMonth"></span><select id="calYear" aria-label="Year"></select></div>
+    <button class="arrow" id="calNext" aria-label="Next month">›</button>
+  </div>
+  <div class="calGrid" id="calDays"></div>
   <button class="closeBtn" data-close>Close</button>
 </div></div>
 
